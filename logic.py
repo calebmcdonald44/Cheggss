@@ -1,13 +1,13 @@
 # CHEGGSS V1.0
 
-# AGENDA - Push to github, start making legal move checks for each piece
+# AGENDA - start making legal move checks for each piece,
 
 # At some point need a day to try and clean up comments
 # FEN string for tracking not position info? Or custom object?
 # Any way to avoid cls.currGame all the time?
 # classmethod vs staticmethod
 # figure out user_move vs user_input (okay to make prop name variable name?)
-    # also, user_input should not be prop/variable names in functions that will be used for engine moves
+# also, user_input should not be prop/variable names in functions that will be used for engine moves
 # mapped_move?
 
 # really need to figure out whether to store start/end squares as strings or arrays. Probably arrays. Causing issues in legal move checks.
@@ -47,7 +47,7 @@ class Piece():
 
 class Board():
     # empty_board = [[], [], [], [], [], [], [], []]
-    starting_board_state = [
+    STARTING_BOARD_STATE = [
         ['r', 'n', 'b', 'q', 'k', 'b', 'n', 'r'],
         ['p', 'p', 'p', 'p', 'p', 'p', 'p', 'p'],
         ['-', '-', '-', '-', '-', '-', '-', '-'],
@@ -57,11 +57,38 @@ class Board():
         ['P', 'P', 'P', 'P', 'P', 'P', 'P', 'P'],
         ['R', 'N', 'B', 'Q', 'K', 'B', 'N', 'R'],
     ]
-    starting_game_state = 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1'
-    # Will this cause game state to reset everytime Board is instantiated?
-    # Maybe these should be kept in class Game() or something
-    board_state = starting_board_state
-    game_state = starting_game_state
+    # starting_game_state = 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1'
+    # # Will this cause game state to reset everytime Board is instantiated?
+    # # Maybe these should be kept in class Game() or something
+    # board_state = starting_board_state
+    # game_state = starting_game_state
+
+    game_state = {
+        "board_state": [
+            ['r', 'n', 'b', 'q', 'k', 'b', 'n', 'r'],
+            ['p', 'p', 'p', 'p', 'p', 'p', 'p', 'p'],
+            ['-', '-', '-', '-', '-', '-', '-', '-'],
+            ['-', '-', '-', '-', '-', '-', '-', '-'],
+            ['-', '-', '-', '-', '-', '-', '-', '-'],
+            ['-', '-', '-', '-', '-', '-', '-', '-'],
+            ['P', 'P', 'P', 'P', 'P', 'P', 'P', 'P'],
+            ['R', 'N', 'B', 'Q', 'K', 'B', 'N', 'R'],
+        ],
+        "to_move": "w",
+        "castling_rights": {
+            "white": {
+                "king_side": True,
+                "queen_side": True,
+            },
+            "black": {
+                "king_side": True,
+                "queen_side": True,
+            }
+        },
+        "en_passant_target_square": None,
+        "halfmove_clock": 0,
+        "fullmove_number": 1,
+    }
 
 
     unicode_dict = {
@@ -80,32 +107,32 @@ class Board():
         '-': '-'
     }
 
-    @classmethod
-    def build_position_from_fen(cls, fen_string):
-        current_position = []
-        current_rank = []
-        rank_count = 1
-        for chr in fen_string:
-            if rank_count > 8:
-                return current_position
-                # More to do
-            elif chr.isalpha():
-                current_rank.append(chr)
-            # (Possibly) don't need to loop for this
-            elif chr.isnumeric():
-                for i in range(int(chr)):
-                    current_rank.append('-')
-            elif chr == '/':
-                current_position.append(current_rank)
-                current_rank = []
-                rank_count += 1
-            elif chr == ' ':
-                if rank_count == 8:
-                    current_position.append(current_rank)
-                    current_rank = []
-                    rank_count += 1
-                    continue
-                # More to do
+    # @classmethod
+    # def build_position_from_fen(cls, fen_string):
+    #     current_position = []
+    #     current_rank = []
+    #     rank_count = 1
+    #     for chr in fen_string:
+    #         if rank_count > 8:
+    #             return current_position
+    #             # More to do
+    #         elif chr.isalpha():
+    #             current_rank.append(chr)
+    #         # (Possibly) don't need to loop for this
+    #         elif chr.isnumeric():
+    #             for i in range(int(chr)):
+    #                 current_rank.append('-')
+    #         elif chr == '/':
+    #             current_position.append(current_rank)
+    #             current_rank = []
+    #             rank_count += 1
+    #         elif chr == ' ':
+    #             if rank_count == 8:
+    #                 current_position.append(current_rank)
+    #                 current_rank = []
+    #                 rank_count += 1
+    #                 continue
+    #             # More to do
     
     @classmethod
     def render_board(cls, board):
@@ -118,26 +145,47 @@ class Board():
         print(f"\n   {files}\n")
 
 class Move():
-    # Probably a (better) way to do this without creating dictionaries
-    @classmethod
-    def split_user_input(cls, user_input):
-        return user_input.split()
+    # Change end square to target square?
+    # takes in square (i.e. "a1") and returns a single number that represents a square.
+    # this makes things easier when checking if a move is legal.
 
     @classmethod
-    def move_mapping(cls, user_input):
-        start_square, end_square = cls.split_user_input(user_input)
-        start_square_mapped = None
-        end_square_mapped = None
-        rank_map = {
-            "1": "7",
-            "2": "6",
-            "3": "5",
-            "4": "4",
-            "5": "3",
-            "6": "2",
-            "7": "1",
-            "8": "0",
+    def map_move_value(cls, user_input):
+        start_square, end_square = user_input.split()
+        start_square_mapped = 0
+        end_square_mapped = 0
+
+        file_map = {
+            "a": 1,
+            "b": 2,
+            "c": 3,
+            "d": 4,
+            "e": 5,
+            "f": 6,
+            "g": 7,
+            "h": 8,
         }
+
+        for chr in start_square:
+            if chr.isalpha():
+                start_square_mapped += file_map[chr]
+            elif chr.isnumeric():
+                start_square_mapped += (int(chr) - 1) * 8
+
+        for chr in end_square:
+            if chr.isalpha():
+                end_square_mapped += file_map[chr]
+            elif chr.isnumeric():
+                end_square_mapped += (int(chr) - 1) * 8
+                
+        return [start_square_mapped, end_square_mapped]
+    
+    @classmethod
+    def map_move_coordinates(cls, user_input):
+        start_square, end_square = user_input.split()
+        start_square_mapped = 0
+        end_square_mapped = 0
+
         file_map = {
             "a": "0",
             "b": "1",
@@ -147,6 +195,17 @@ class Move():
             "f": "5",
             "g": "6",
             "h": "7",
+        }
+
+        rank_map = {
+            "1": "7",
+            "2": "6",
+            "3": "5",
+            "4": "4",
+            "5": "3",
+            "6": "2",
+            "7": "1",
+            "8": "0",
         }
 
         for chr in start_square:
@@ -160,25 +219,44 @@ class Move():
                 end_square_mapped = file_map[chr]
             elif chr.isnumeric():
                 end_square_mapped = rank_map[chr] + end_square_mapped
-        
-        return f"${start_square_mapped},{end_square_mapped}"
+
+        return [start_square_mapped, end_square_mapped]
 
     @classmethod
     def handle_user_move(cls, start_square, end_square):
         pass
 
-    # everything set to null is just for testing purposes
-
     # first check if piece can move like that
     # then make move and check if king is in check
+    # will probably need to pass in square values AND string coordinates
     @classmethod
-    def is_legal_move(cls, user_input, proposed_board=None):
+    def is_legal_move(cls, user_input, current_board=None, proposed_board=None):
         # need to prevent same starting and ending square, and squares
         # that don't exist (a0, z6, etc)
-        start_square, end_square = cls.split_user_input(user_input)
+
+        # 8    57 58 59 60 61 62 63 64
+        # 7    49 50 51 52 53 54 55 56
+        # 6    41 42 43 44 45 46 47 48
+        # 5    33 34 35 36 37 38 39 40
+        # 4    25 26 27 28 29 30 31 32
+        # 3    17 18 19 20 21 22 23 24
+        # 2    9  10 11 12 13 14 15 16
+        # 1    1  2  3  4  5  6  7  8
+
+        #      a  b  c  d  e  f  g  h
+        start_square, end_square = user_input.split()
         return True
     
+    @classmethod
+    def make_move(cls, move, current_game):
+        moving_piece = current_game.game_state["board_state"][int(move[0][0])][int(move[0][1])]
+        
+        current_game.game_state["board_state"][int(move[1][0])][int(move[1][1])] = moving_piece
+        current_game.game_state["board_state"][int(move[0][0])][int(move[0][1])] = Piece.empty_square
+        # update game state (whose turn it is, halfmoves, etc.)
 
+
+    # generate legal moves function 
 
 
 

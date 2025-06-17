@@ -11,12 +11,14 @@ class Game():
         match = re.fullmatch(pattern, user_input)
         return match is not None
 
-    # Separate message for illegal move and improperly formatted user input
     @classmethod
-    def prompt_user_move(cls, current_position=CURRENT_GAME.game_state):
-        if current_position == cls.CURRENT_GAME.starting_game_state:
+    def prompt_user_move(cls):
+        current_position=cls.CURRENT_GAME.game_state["board_state"]
+        legal_user_move = None
+
+        if current_position == cls.CURRENT_GAME.STARTING_BOARD_STATE:
             print("\nThank you for challenging Cheggss v1.0 to a game of chess! Your help with testing is appreciated and any feedback is welcome.")
-        cls.CURRENT_GAME.render_board(cls.CURRENT_GAME.build_position_from_fen(cls.CURRENT_GAME.game_state))
+        cls.CURRENT_GAME.render_board(current_position)
 
         legal_move = False
         while not legal_move:
@@ -24,13 +26,16 @@ class Game():
             if not cls.is_valid_input(user_move):
                 print(f"\nMove '{user_move}' is improperly formatted. Moves must be formatted 'start_square end_square'.\nExample: d2 d4\n")
                 continue
-            if Move.is_legal_move(user_move):
+            if Move.is_legal_move(user_move, cls.CURRENT_GAME):
+                legal_user_move = Move.map_move_coordinates(user_move)
                 legal_move = True
-            else:
-                print(f"\n'{user_move}' is not a legal move. Try again.\n(Legal mov)")
-                continue
 
-        cls.play_game(to_move='b')
+            else:
+                print(f"\n'{user_move}' is not a legal move. Try again.\n")
+                continue
+        
+        Move.make_move(move=legal_user_move, current_game=cls.CURRENT_GAME)
+        cls.play_game()
 
         
 
@@ -39,13 +44,14 @@ class Game():
         print("Your turn Cheggss! Take your time buddy")
         pass
 
-    # Rename?
+    # Rename? continue_game?
     @classmethod
-    def play_game(cls, to_move):
+    def play_game(cls):
+        game_state=cls.CURRENT_GAME.game_state
         # logic for game ending (draw, stalemate, win, loss)
-        if to_move == 'w':
-            cls.prompt_user_move(cls.CURRENT_GAME.game_state)
+        if game_state["to_move"] == 'w':
+            cls.prompt_user_move()
         else:
             cls.engine_move(cls.CURRENT_GAME.game_state)
 
-Game.play_game(to_move='w')
+Game.play_game()
