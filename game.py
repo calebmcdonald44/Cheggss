@@ -7,7 +7,7 @@ class Game():
     # Does this belong in this class? Helper class?
     @classmethod
     def is_valid_input(cls, user_input):
-        pattern = r'^[a-zA-Z][0-9] [a-zA-Z][0-9]$'
+        pattern = r'^[a-hA-h][0-9] [a-hA-h][0-9]$'
         match = re.fullmatch(pattern, user_input)
         return match is not None
 
@@ -16,6 +16,7 @@ class Game():
         current_position=cls.CURRENT_GAME.game_state["board_state"]
         legal_user_move = None
 
+        # also check amount of moves made
         if current_position == cls.CURRENT_GAME.STARTING_BOARD_STATE:
             print("\nThank you for challenging Cheggss v1.0 to a game of chess! Your help with testing is appreciated and any feedback is welcome.")
         cls.CURRENT_GAME.render_board(current_position)
@@ -26,7 +27,7 @@ class Game():
             if not cls.is_valid_input(user_move):
                 print(f"\nMove '{user_move}' is improperly formatted. Moves must be formatted 'start_square end_square'.\nExample: d2 d4\n")
                 continue
-            if Move.is_legal_move(user_move, cls.CURRENT_GAME):
+            if Move.is_legal_move(user_move, cls.CURRENT_GAME.game_state):
                 legal_user_move = Move.map_move_coordinates(user_move)
                 legal_move = True
 
@@ -52,6 +53,6 @@ class Game():
         if game_state["to_move"] == 'w':
             cls.prompt_user_move()
         else:
-            cls.engine_move(cls.CURRENT_GAME.game_state)
+            cls.engine_move(game_state)
 
 Game.play_game()

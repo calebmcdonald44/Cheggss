@@ -1,3 +1,3 @@
-from logic import Move
+from logic import Move, Board
 
-print(Move.move_mapping(user_input="b4 e2"))
+print(Move.legal_bishop_move(Board.game_state, 3, 4, 0, 7))

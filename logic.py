@@ -1,18 +1,14 @@
 # CHEGGSS V1.0
 
-# AGENDA - start making legal move checks for each piece,
-
 # At some point need a day to try and clean up comments
-# FEN string for tracking not position info? Or custom object?
 # Any way to avoid cls.currGame all the time?
 # classmethod vs staticmethod
 # figure out user_move vs user_input (okay to make prop name variable name?)
 # also, user_input should not be prop/variable names in functions that will be used for engine moves
-# mapped_move?
-
-# really need to figure out whether to store start/end squares as strings or arrays. Probably arrays. Causing issues in legal move checks.
+# probably shortend start_square and end_square to st_sq and end_sq
 
 class Piece():
+    # might not need these
     empty_square = '-'
 
     black_king = 'k'
@@ -28,14 +24,6 @@ class Piece():
     white_bishop = 'B'
     white_knight = 'N'
     white_pawn = 'P'
-
-    # @classmethod
-    # def is_black(cls, piece):
-    #     return piece.islower()
-
-    # @classmethod
-    # def is_white(cls, piece):
-    #     return piece.isupper()
     
     @classmethod
     def color(cls, piece):
@@ -68,7 +56,7 @@ class Board():
             ['r', 'n', 'b', 'q', 'k', 'b', 'n', 'r'],
             ['p', 'p', 'p', 'p', 'p', 'p', 'p', 'p'],
             ['-', '-', '-', '-', '-', '-', '-', '-'],
-            ['-', '-', '-', '-', '-', '-', '-', '-'],
+            ['-', '-', '-', '-', 'Q', '-', '-', '-'],
             ['-', '-', '-', '-', '-', '-', '-', '-'],
             ['-', '-', '-', '-', '-', '-', '-', '-'],
             ['P', 'P', 'P', 'P', 'P', 'P', 'P', 'P'],
@@ -230,10 +218,11 @@ class Move():
     # then make move and check if king is in check
     # will probably need to pass in square values AND string coordinates
     @classmethod
-    def is_legal_move(cls, user_input, current_board=None, proposed_board=None):
+    def is_legal_move(cls, user_input, game_state=None, proposed_board=None):
         # need to prevent same starting and ending square, and squares
         # that don't exist (a0, z6, etc)
 
+        # VALUES
         # 8    57 58 59 60 61 62 63 64
         # 7    49 50 51 52 53 54 55 56
         # 6    41 42 43 44 45 46 47 48
@@ -244,8 +233,126 @@ class Move():
         # 1    1  2  3  4  5  6  7  8
 
         #      a  b  c  d  e  f  g  h
+
+        # COORDINATES
+        # 8    00 01 02 03 04 05 06 07
+        # 7    10 11 12 13 14 15 16 17
+        # 6    20 21 22 23 24 25 26 27
+        # 5    30 31 32 33 34 35 36 37
+        # 4    40 41 42 43 44 45 46 47
+        # 3    50 51 52 53 54 55 56 57
+        # 2    60 61 62 63 64 65 66 67
+        # 1    70 71 72 73 74 75 76 77
+
+        #      a  b  c  d  e  f  g  h
         start_square, end_square = user_input.split()
+
+        square_coordinates = cls.map_move_coordinates(user_input)
+        start_square_coordinates = [square_coordinates[0][0], square_coordinates[0][1]]
+        end_square_coordinates = [square_coordinates[1][0], square_coordinates[1][1]]
+        start_square_rank = int(start_square_coordinates[0])
+        start_square_file = int(start_square_coordinates[1])
+        end_square_rank = int(end_square_coordinates[0])
+        end_square_file = int(end_square_coordinates[1])
+
+        square_values = cls.map_move_value(user_input)
+        start_square_value = square_values[0]
+        end_square_value = square_values[1]
+
+        moving_piece = game_state["board_state"][start_square_rank][start_square_file]
+
+        # making sure a move is actually made
+        if start_square == end_square:
+            return False
+        
+        # making sure the correct color is being moved
+        if Piece.color(moving_piece) != game_state["to_move"]:
+            return False
+        
+        if moving_piece.upper() == "R":
+            return cls.legal_rook_move(game_state, start_square_rank, start_square_file, end_square_rank, end_square_file)
+        
+        if moving_piece.upper() == "B":
+            return cls.legal_bishop_move(game_state, start_square_rank, start_square_file, end_square_rank, end_square_file)
+        
+        if moving_piece.upper() == "Q":
+            return (
+                cls.legal_bishop_move(game_state, start_square_rank, start_square_file, end_square_rank, end_square_file) or 
+                cls.legal_rook_move(game_state, start_square_rank, start_square_file, end_square_rank, end_square_file)
+            )
+
+
+
         return True
+    
+    @classmethod
+    def legal_rook_move(cls, game_state, start_square_rank, start_square_file, end_square_rank, end_square_file):
+        # making sure move is orthagonal
+        if (start_square_rank != end_square_rank) and (start_square_file != end_square_file):
+            return False
+
+        # horizontal move
+        if (start_square_rank == end_square_rank):
+            step = +1 if start_square_file < end_square_file else -1
+            for file in range((start_square_file + step), (end_square_file + step), step):
+                if Piece.color(game_state["board_state"][start_square_rank][file]) == '-':
+                    continue # empty square
+                elif Piece.color(game_state["board_state"][start_square_rank][file]) == game_state["to_move"]:
+                    return False # friendly piece in the way
+                else:
+                    if file == end_square_file:
+                        break
+                    return False
+            return True
+        
+        # vertical move
+        else:
+            step = 1 if start_square_rank < end_square_rank else -1
+            for rank in range((start_square_rank + step), (end_square_rank + step), step):
+                if Piece.color(game_state["board_state"][rank][start_square_file]) == '-':
+                    continue # empty square
+                elif Piece.color(game_state["board_state"][rank][start_square_file]) == game_state["to_move"]:
+                    return False # friendly piece in the way
+                else:
+                    if rank == end_square_rank:
+                        break # current square is end_square and occupied by opposing piece
+                    return False
+            return True
+        
+    @classmethod
+    def legal_bishop_move(cls, game_state, start_square_rank, start_square_file, end_square_rank, end_square_file):
+        # making sure move is diagonal
+        if (abs(end_square_rank - start_square_rank) != abs(end_square_file - start_square_file)):
+            return False
+
+        rank_step = 1 if start_square_rank < end_square_rank else -1
+        file_step = 1 if start_square_file < end_square_file else -1
+
+        for rank, file in zip(
+            range((start_square_rank + rank_step), (end_square_rank + rank_step), rank_step),
+            range((start_square_file + file_step), (end_square_file + file_step), file_step)
+        ):
+            if Piece.color(game_state["board_state"][rank][file]) == '-':
+                continue # empty square
+            elif Piece.color(game_state["board_state"][rank][file]) == game_state["to_move"]:
+                return False # friendly piece in the way
+            else:
+                if [rank, file] == [end_square_rank, end_square_file]:
+                    break # current square is end_square and occupied by opposing piece
+                return False 
+        return True
+    
+    @classmethod
+    def legal_knight_move(cls, game_state, start_square_rank, start_square_file, end_square_rank, end_square_file):
+        pass
+
+    @classmethod
+    def legal_pawn_move(cls, game_state, start_square_rank, start_square_file, end_square_rank, end_square_file):
+        pass
+
+    @classmethod
+    def legal_king_move(cls, game_state, start_square_rank, start_square_file, end_square_rank, end_square_file):
+        pass
     
     @classmethod
     def make_move(cls, move, current_game):
@@ -256,37 +363,6 @@ class Move():
         # update game state (whose turn it is, halfmoves, etc.)
 
 
+    # EngineMoves class that extends Moves class?
     # generate legal moves function 
 
-
-
-
-
-
-
-
-    # # this is where you left off, you need to make sure active_color is being passed in
-    # def legal_rook_move(cls, start_square, end_square, active_color):
-    #     # maybe just store array for start and end square rank and file? Separate rank and file variables (4 total)?
-    #     # if vs else if?
-
-    #     # check if end_square is in line with start_square horizonally or vertically
-    #     if not (start_square[0] == end_square[0]) or (start_square[1] == end_square[1]):
-    #         return False
-        
-    #     end_square_piece = Board.board_state[int(end_square[0])][int(end_square[1])]
-    #     # Check that ending square is either unoccupied or occupied by opposite color
-    #     if active_color == Piece.color(end_square_piece):
-    #         return False
-        
-    #     # Check that there are no pieces in move path
-    #     # Horizontal
-    #     if start_square[0] == end_square[0]:
-    #         # this messes up if first number in range is bigger than second
-    #         # could use step parameter in range, but need to check which is bigger first
-    #         for file in range(int(start_square[1]), int(end_square[1])):
-    #             if Board.board_state[int(start_square[0])][file] != Piece.empty_square:
-    #                 return False
-                
-    #     # if start_square[1] == end_square[1]:
-    #     #     for rank in range(int(start))
