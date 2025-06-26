@@ -1,3 +1,3 @@
 from logic import Move, Board
 
-print(Move.legal_bishop_move(Board.game_state, 3, 4, 0, 7))
+print(Move.legal_knight_move(Board.game_state, 7, 1, 5, 2))

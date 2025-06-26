@@ -269,6 +269,9 @@ class Move():
         if Piece.color(moving_piece) != game_state["to_move"]:
             return False
         
+        if moving_piece.upper() == "N":
+            return cls.legal_knight_move(game_state, start_square_rank, start_square_file, end_square_rank, end_square_file)
+
         if moving_piece.upper() == "R":
             return cls.legal_rook_move(game_state, start_square_rank, start_square_file, end_square_rank, end_square_file)
         
@@ -344,7 +347,17 @@ class Move():
     
     @classmethod
     def legal_knight_move(cls, game_state, start_square_rank, start_square_file, end_square_rank, end_square_file):
-        pass
+        rank_offset = start_square_rank - end_square_rank
+        file_offset = start_square_file - end_square_file
+        if abs(rank_offset) not in (1, 2):
+            return False
+        if abs(file_offset) not in (1, 2):
+            return False
+        if abs(file_offset) == abs(rank_offset):
+            return False
+        if Piece.color(game_state["board_state"][end_square_rank][end_square_file]) == game_state["to_move"]:
+            return False
+        return True
 
     @classmethod
     def legal_pawn_move(cls, game_state, start_square_rank, start_square_file, end_square_rank, end_square_file):
