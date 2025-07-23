@@ -15,6 +15,7 @@ class Game():
     def prompt_user_move(cls):
         current_position=cls.CURRENT_GAME.game_state["board_state"]
         legal_user_move = None
+        to_move = cls.CURRENT_GAME.game_state["to_move"]
 
         # also check amount of moves made
         if current_position == cls.CURRENT_GAME.STARTING_BOARD_STATE:
@@ -36,7 +37,7 @@ class Game():
                 continue
         
         Move.make_move(move=legal_user_move, current_game=cls.CURRENT_GAME)
-        cls.play_game()
+        cls.play_game(to_move)
 
         
 
@@ -47,12 +48,14 @@ class Game():
 
     # Rename? continue_game?
     @classmethod
-    def play_game(cls):
+    def play_game(cls, user_color):
         game_state=cls.CURRENT_GAME.game_state
         # logic for game ending (draw, stalemate, win, loss)
-        if game_state["to_move"] == 'w':
+        if game_state["to_move"] == user_color:
             cls.prompt_user_move()
         else:
-            cls.engine_move(game_state)
+            # cls.engine_move(game_state) (temporary)
+            cls.prompt_user_move()
+        print('check notes at top of logic.py dummy')
 
-Game.play_game()
+Game.play_game('w')

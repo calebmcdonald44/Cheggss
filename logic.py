@@ -7,6 +7,11 @@
 # also, user_input should not be prop/variable names in functions that will be used for engine moves
 # probably shortend start_square and end_square to st_sq and end_sq
 
+# !
+# need to figure out how to set everything (en_passant, half_moves, etc.) at the end of make_move()
+# also update logic in line 404 and 416
+# !
+
 class Piece():
     # might not need these
     empty_square = '-'
@@ -58,11 +63,11 @@ class Board():
             ['-', '-', '-', '-', '-', '-', '-', '-'],
             ['-', '-', '-', '-', '-', '-', '-', '-'],
             ['-', '-', '-', '-', '-', '-', '-', '-'],
-            ['-', '-', '-', '-', '-', '-', '-', '-'],
+            ['-', '-', '-', '-', 'n', '-', '-', '-'],
             ['P', 'P', 'P', 'P', 'P', 'P', 'P', 'P'],
             ['R', 'N', 'B', 'Q', 'K', 'B', 'N', 'R'],
         ],
-        "to_move": "w",
+        "to_move": "b",
         "castling_rights": {
             "white": {
                 "king_side": True,
@@ -288,11 +293,15 @@ class Move():
             )
         
         if moving_piece.upper() == "P":
-            return cls.legal_pawn_move(game_state, start_square_rank, start_square_file, end_square_rank, end_square_file)
+            retVal, en_passant = cls.legal_pawn_move(game_state, start_square_rank, start_square_file, end_square_rank, end_square_file)
+            if retVal:
+                game_state["to_move"] = en_passant
+            return retVal
         # Need to eventually have a "retVal" variable that these if statements
         # are setting, and get prompt_user_move to handle tuples with en passant
         # information
 
+        # remove this?
         return True
     
     @classmethod
@@ -369,46 +378,49 @@ class Move():
     @classmethod
     def legal_pawn_move(cls, game_state, start_square_rank, start_square_file, end_square_rank, end_square_file):
         home_rank = 6
-        first_move = False
+        # first_move = False
         legal_rank_increment = -1
+        new_en_passant_square = '-'
 
         if game_state["to_move"] == 'b': # establishing starting rank for pawns
             home_rank = 1
             legal_rank_increment = 1
         if home_rank == start_square_rank: # establishing whether or not a pawn can move forward two spaces
-            first_move = True
+            # first_move = True
             legal_rank_increment *= 2
 
-        rank_offset = start_square_rank - end_square_rank
-        file_offset = start_square_file - end_square_file
+        rank_offset = end_square_rank - start_square_rank
+        file_offset = end_square_file - start_square_file
         two_square_move = False
         en_passant_capture = False
 
         if file_offset == 0: # forward moves
             if game_state["board_state"][end_square_rank][end_square_file] != '-':
-                return False
-            if rank_offset > abs(legal_rank_increment):
-                return False
-            if rank_offset == 2 and game_state["board_state"][end_square_rank - 1][end_square_file] == '-':
-                two_square_move == True
+                return False, new_en_passant_square
+            if abs(rank_offset) > abs(legal_rank_increment):
+                return False, new_en_passant_square
+            if (home_rank == 6 and rank_offset > 0) or (home_rank == 1 and rank_offset < 0):
+                return False, new_en_passant_square
+            if rank_offset == 2 and game_state["board_state"][end_square_rank - 1][end_square_file] == '-': # this logic is wrong
+                two_square_move == True 
             # PROMOTION LOGIC HERE
 
         else: # capturing moves
             legal_rank_increment = legal_rank_increment if abs(legal_rank_increment) == 1 else (legal_rank_increment / 2)
             if abs(file_offset) != 1 or rank_offset != legal_rank_increment:
-                return False
+                return False, new_en_passant_square
             if Piece.color(game_state["board_state"][end_square_rank][end_square_file]) == '-':
                 if game_state["en_passant_target_square"] == str(end_square_rank) + str(end_square_file):
                     en_passant_capture = True
                 else:
-                    return False
+                    return False, new_en_passant_square
 
         if two_square_move == True:
-            game_state["en_passant_target_square"] = str(end_square_rank) + str(end_square_file)
+            new_en_passant_square = str(end_square_rank) + str(end_square_file) # update this logic
         if en_passant_capture:
             game_state["board_state"][end_square_rank][end_square_file - legal_rank_increment] = '-' # removing captured piece in en passant
 
-        return True
+        return True, new_en_passant_square
 
     @classmethod
     def legal_king_move(cls, game_state, start_square_rank, start_square_file, end_square_rank, end_square_file):
@@ -420,12 +432,20 @@ class Move():
         
         current_game.game_state["board_state"][int(move[1][0])][int(move[1][1])] = moving_piece
         current_game.game_state["board_state"][int(move[0][0])][int(move[0][1])] = Piece.empty_square
+
+        cls.switch_color_to_move(current_game)
         # update game state (whose turn it is, halfmoves, clear en_passant squares, etc.)
         # keeping track of en passant will be tricky. if we clear en passant squares at end
         # of making move, it will clear a square that has just been created. If we want to 
         # set the en passant square outside of legal_pawn_move, it's parent function will have
         # to handle a return of both boolean and string.
 
+    @classmethod
+    def switch_color_to_move(cls, current_game):
+        if current_game.game_state["to_move"] == 'w':
+            current_game.game_state["to_move"] = 'b'
+        else:
+            current_game.game_state["to_move"] = 'w'
 
     # EngineMoves class that extends Moves class?
     # generate legal moves function 
